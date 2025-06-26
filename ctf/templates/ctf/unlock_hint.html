@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unlock Hint</title>
+</head>
+<body>
+    <h1>Unlock Hint</h1>
+    <p>Are you sure you want to unlock this hint?</p>
+    <p>{{ hint.text }} (Cost: {{ hint.cost }})</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Unlock</button>
+    </form>
+    <a href="{% url 'ctf:challenge_detail' hint.challenge.pk %}">Back to Challenge</a>
+</body>
+</html> 

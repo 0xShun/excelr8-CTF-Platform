@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Challenges</title>
+</head>
+<body>
+    <h1>Available Challenges</h1>
+    <ul>
+        {% for category in categories %}
+            <li><strong>{{ category.name }}</strong>: {{ category.description }}</li>
+        {% endfor %}
+    </ul>
+    <ul>
+        {% for challenge in challenges %}
+            <li>
+                <a href="{% url 'ctf:challenge_detail' challenge.pk %}">{{ challenge.title }}</a>
+                ({{ challenge.category.name }}, {{ challenge.value }} pts)
+            </li>
+        {% empty %}
+            <li>No challenges available.</li>
+        {% endfor %}
+    </ul>
+    <a href="{% url 'ctf:team_register' %}">Register a Team</a>
+</body>
+</html> 

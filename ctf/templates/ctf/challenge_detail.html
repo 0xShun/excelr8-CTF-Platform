@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ challenge.title }}</title>
+</head>
+<body>
+    <h1>{{ challenge.title }}</h1>
+    <p><strong>Category:</strong> {{ challenge.category.name }}</p>
+    <p><strong>Value:</strong> {{ challenge.value }} pts</p>
+    <p>{{ challenge.description }}</p>
+    <h3>Files</h3>
+    <ul>
+        {% for file in files %}
+            <li><a href="{{ file.file.url }}">{{ file.file.name }}</a></li>
+        {% empty %}
+            <li>No files attached.</li>
+        {% endfor %}
+    </ul>
+    <h3>Hints</h3>
+    <ul>
+        {% for hint in hints %}
+            <li>{{ hint.text }} (Cost: {{ hint.cost }})
+                <form method="post" action="{% url 'ctf:unlock_hint' hint.id %}">
+                    {% csrf_token %}
+                    <button type="submit">Unlock Hint</button>
+                </form>
+            </li>
+        {% empty %}
+            <li>No hints available.</li>
+        {% endfor %}
+    </ul>
+    <h3>Submit Flag</h3>
+    <form method="post">
+        {% csrf_token %}
+        {{ submission_form.as_p }}
+        <button type="submit">Submit Flag</button>
+    </form>
+    <a href="{% url 'ctf:challenge_list' %}">Back to Challenges</a>
+</body>
+</html> 
