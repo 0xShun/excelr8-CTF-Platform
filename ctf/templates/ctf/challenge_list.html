@@ -1,25 +1,188 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Challenges</title>
-</head>
-<body>
-    <h1>Available Challenges</h1>
-    <ul>
-        {% for category in categories %}
-            <li><strong>{{ category.name }}</strong>: {{ category.description }}</li>
-        {% endfor %}
-    </ul>
-    <ul>
-        {% for challenge in challenges %}
-            <li>
-                <a href="{% url 'ctf:challenge_detail' challenge.pk %}">{{ challenge.title }}</a>
-                ({{ challenge.category.name }}, {{ challenge.value }} pts)
-            </li>
-        {% empty %}
-            <li>No challenges available.</li>
-        {% endfor %}
-    </ul>
-    <a href="{% url 'ctf:team_register' %}">Register a Team</a>
-</body>
-</html> 
+{% extends 'ctf/base.html' %}
+
+{% block title %}Challenges - EXCELR8 CTF{% endblock %}
+
+{% block extra_css %}
+<style>
+    .challenge-header {
+        background: rgba(0, 255, 255, 0.05);
+        border: 1px solid var(--accent-primary);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        /* box-shadow: 0 0 20px var(--accent-glow); */
+    }
+    
+    .challenge-card {
+        background: var(--bg-secondary);
+        border: 2px solid var(--accent-primary);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    box-shadow: none !important; /* remove global cyan glow */
+    }
+    
+    .challenge-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+        transition: left 0.5s;
+    }
+    
+    .challenge-card:hover::before {
+        left: 100%;
+    }
+    
+    .challenge-card:hover {
+        transform: translateY(-8px);
+        /* box-shadow removed per request */
+        border-color: var(--accent-primary);
+    }
+    
+    .difficulty-easy { border-left: 4px solid #00ff00 !important; }
+    .difficulty-medium { border-left: 4px solid #ffff00 !important; }
+    .difficulty-hard { border-left: 4px solid #ff6600 !important; }
+    .difficulty-expert { border-left: 4px solid #ff0000 !important; }
+    
+    .category-badge {
+        background: rgba(0, 255, 255, 0.2);
+        border: 1px solid var(--accent-primary);
+        color: var(--accent-primary);
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .points-badge {
+        background: linear-gradient(45deg, var(--accent-primary), var(--accent-secondary));
+        color: var(--bg-primary);
+        font-weight: bold;
+        box-shadow: 0 0 10px var(--accent-glow);
+    }
+    
+    .solved {
+        border-left: 4px solid #28a745;
+        position: relative;
+    }
+    /* Dim effect for solved challenges excluding the check icon */
+    .challenge-card.solved .card-header > *:not(.fa-check-circle),
+    .challenge-card.solved .card-body > *,
+    .challenge-card.solved .card-footer > * {
+        opacity: 0.35;
+        filter: grayscale(40%) brightness(0.8);
+        transition: opacity 0.3s ease;
+    }
+    .challenge-card.solved .fa-check-circle {
+        opacity: 1 !important;
+        filter: none !important;
+        color: var(--accent-primary) !important;
+        text-shadow: 0 0 8px var(--accent-glow), 0 0 14px var(--accent-glow);
+    }
+    /* On hover, briefly show full content again */
+    .challenge-card.solved:hover .card-header > *:not(.fa-check-circle),
+    .challenge-card.solved:hover .card-body > *,
+    .challenge-card.solved:hover .card-footer > * {
+        opacity: 0.6;
+        filter: grayscale(20%) brightness(0.9);
+    }
+    
+    .progress-bar {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="challenge-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2><i class="fas fa-puzzle-piece"></i> CHALLENGES</h2>
+        <div>
+            <span class="badge points-badge">{{ challenges|length }} AVAILABLE</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form method="get" class="d-flex">
+            <input type="search" name="search" class="form-control me-2" placeholder="Search challenges..." value="{{ search_query }}">
+            <button class="btn btn-outline-primary" type="submit">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <form method="get">
+            <select name="category" class="form-select" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if category.id|stringformat:"s" == selected_category %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- Challenges Grid -->
+<div class="row">
+    {% for challenge in challenges %}
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card challenge-card h-100 {% if challenge.user_solved %}solved{% endif %}" onclick="location.href='{% url 'ctf:challenge_detail' challenge.pk %}'">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="badge bg-secondary">{{ challenge.category.name }}</span>
+                {% if challenge.user_solved %}
+                    <i class="fas fa-check-circle text-success" title="Solved"></i>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ challenge.title }}</h5>
+                <p class="card-text text-truncate">{{ challenge.description|truncatewords:15 }}</p>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge score-badge">{{ challenge.value }} pts</span>
+                    <small class="text-muted">
+                        <i class="fas fa-users"></i> {{ challenge.solve_count }} solves
+                    </small>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <div class="progress" style="height: 5px;">
+                    {% widthratio challenge.solve_count 50 100 as solve_percentage %}
+                    <div class="progress-bar" style="width: {{ solve_percentage }}%"></div>
+                </div>
+                <small class="text-muted">{{ challenge.attempt_count }} total attempts</small>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-puzzle-piece fa-4x text-muted mb-3"></i>
+                <h5>No challenges found</h5>
+                <p class="text-muted">
+                    {% if search_query %}
+                        No challenges match your search criteria.
+                    {% else %}
+                        No challenges are currently available.
+                    {% endif %}
+                </p>
+                {% if search_query %}
+                <a href="{% url 'ctf:challenge_list' %}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Show All Challenges
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

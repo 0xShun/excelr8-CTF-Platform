@@ -1,0 +1,91 @@
+{% extends 'ctf/base.html' %}
+
+{% block title %}Login - EXCELR8 CTF{% endblock %}
+
+{% block content %}
+<div class="login-wrapper d-flex justify-content-center">
+    <div class="login-card card p-0 w-100" style="max-width:560px;">
+        <div class="card-header text-center py-3">
+            <h4 class="mb-0"><i class="fas fa-sign-in-alt"></i> Login</h4>
+        </div>
+        <div class="card-body p-4">
+            {% if form.errors %}
+                <div class="alert alert-danger py-2">
+                    <i class="fas fa-exclamation-triangle"></i> Invalid credentials.
+                </div>
+            {% endif %}
+            <form method="post" novalidate>
+                {% csrf_token %}
+                        <div class="mb-4 position-relative">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                            <div class="neo-input d-flex align-items-center">
+                                <span class="icon"><i class="fas fa-user"></i></span>
+                                {{ form.username }}
+                            </div>
+                        </div>
+                        <div class="mb-4 position-relative">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+                            <div class="neo-input d-flex align-items-center" id="pw-wrapper">
+                                <span class="icon"><i class="fas fa-lock"></i></span>
+                                {{ form.password }}
+                                <button type="button" class="toggle-pass btn btn-sm btn-outline-light ms-2" tabindex="-1"><i class="fas fa-eye"></i></button>
+                            </div>
+                        </div>
+                <input type="hidden" name="next" value="{{ next }}" />
+                <button type="submit" class="btn btn-primary w-100 mb-3"><i class="fas fa-sign-in-alt"></i> Login</button>
+            </form>
+            <div class="text-center small mt-2">
+                <div class="mb-1">Don't have an account? <a href="{% url 'ctf:register' %}">Register here</a></div>
+                <a href="{% url 'password_reset' %}">Forgot your password?</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-wrapper { min-height: 70vh; align-items: flex-start; padding-top: 4rem; }
+    .login-card { backdrop-filter: blur(12px); }
+    .neo-input { 
+        background: rgba(0,255,255,0.05); 
+        border: 1px solid var(--accent-primary); 
+        border-radius: 14px; 
+        padding: 0.55rem 0.9rem; 
+        position: relative; 
+        width: 100%;
+        box-shadow: inset 0 0 10px rgba(0,255,255,0.15), 0 0 12px var(--accent-glow);
+        transition: box-shadow .2s, transform .2s, border-color .2s;
+    }
+    .neo-input:focus-within { box-shadow: 0 0 18px var(--accent-glow); border-color: var(--accent-primary); transform: translateY(-2px); }
+    .neo-input .icon { color: var(--accent-primary); font-size: 1.1rem; display: inline-flex; align-items: center; }
+    .neo-input input { color: var(--text-primary); }
+    .neo-input input::placeholder { color: var(--text-secondary); opacity: .5; }
+    .toggle-pass { border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--accent-primary); color: var(--accent-primary); }
+    .toggle-pass:hover { background: var(--accent-primary); color: var(--bg-primary); }
+    @media (max-width: 576px){ .login-wrapper { padding-top:2rem; } }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add a simple show/hide password without relying on extra libs
+document.addEventListener('DOMContentLoaded', function(){
+    const btn = document.querySelector('.toggle-pass');
+    if(!btn) return;
+    const input = btn.parentElement.querySelector('input');
+    // Inject desired classes & attributes if widget-tweaks not installed
+    const allInputs = document.querySelectorAll('.neo-input input');
+    allInputs.forEach(i=>{
+        i.classList.add('form-control','bg-transparent','border-0','shadow-none','ps-2');
+        i.setAttribute('autocomplete', i.type === 'password' ? 'current-password' : 'username');
+        if(!i.placeholder) i.placeholder = i.name.charAt(0).toUpperCase()+i.name.slice(1);
+    });
+    btn.addEventListener('click', () => {
+        const eye = btn.querySelector('i');
+        if(input.type === 'password') { input.type = 'text'; eye.classList.replace('fa-eye','fa-eye-slash'); }
+        else { input.type = 'password'; eye.classList.replace('fa-eye-slash','fa-eye'); }
+    });
+});
+</script>
+{% endblock %}

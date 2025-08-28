@@ -1,0 +1,128 @@
+# === Python / Django core ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+
+# Byte-compiled / optimized / DLL files
+*.dll
+*.dylib
+
+# Distribution / packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+ENV/
+env/
+env.bak/
+.python-version
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.coverage*
+.coverage.*
+.cache/
+.pytest_cache/
+.tox/
+.nox/
+coverage.xml
+nosetests.xml
+junit.xml
+
+# Type checker / lint caches
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+ruff_cache/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.code-workspace
+
+# OS / Misc
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs & runtime
+*.log
+logs/
+celerybeat-schedule*
+*.pid
+
+# Django specific
+# Local sqlite database (do not commit production DB dumps)
+db.sqlite3
+
+# Collected static files (use collectstatic to regenerate)
+staticfiles/
+
+# User uploaded media (create the folder but keep out of git)
+media/
+media/*
+!media/.gitkeep
+
+# Local settings & secrets
+local_settings.py
+production_security_settings.py
+# Environment / secret files
+.env
+.env.*
+*.env
+secrets.json
+
+# Security / keys (generic patterns)
+*.pem
+*.key
+*.crt
+*.der
+*.pfx
+
+# Docker / Compose overrides
+ docker-compose.override.yml
+
+# Coverage / profiling
+.prof
+*.prof
+profile.out
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Lock / state
+*.lock
+
+# Node / frontend (if later added)
+node_modules/
+*.tsbuildinfo
+todo.md
+# Backup of migrations auto-created during experimentation (keep real migrations committed)
+# Uncomment the next line ONLY if you intentionally want to exclude experimental migration backups
+# migrations_bak/
+
+# === Project specific notes ===
+# 1. Keep real Django migrations in version control (do NOT ignore ctf/migrations/)
+# 2. Add a .env file locally containing: SECRET_KEY, DB creds, EMAIL settings, etc.
+# 3. If you add additional secret config files, append them above.
+
+# Git metadata helpers
+.gitattributes

@@ -1,40 +1,187 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ challenge.title }}</title>
-</head>
-<body>
-    <h1>{{ challenge.title }}</h1>
-    <p><strong>Category:</strong> {{ challenge.category.name }}</p>
-    <p><strong>Value:</strong> {{ challenge.value }} pts</p>
-    <p>{{ challenge.description }}</p>
-    <h3>Files</h3>
-    <ul>
-        {% for file in files %}
-            <li><a href="{{ file.file.url }}">{{ file.file.name }}</a></li>
-        {% empty %}
-            <li>No files attached.</li>
-        {% endfor %}
-    </ul>
-    <h3>Hints</h3>
-    <ul>
-        {% for hint in hints %}
-            <li>{{ hint.text }} (Cost: {{ hint.cost }})
-                <form method="post" action="{% url 'ctf:unlock_hint' hint.id %}">
-                    {% csrf_token %}
-                    <button type="submit">Unlock Hint</button>
-                </form>
-            </li>
-        {% empty %}
-            <li>No hints available.</li>
-        {% endfor %}
-    </ul>
-    <h3>Submit Flag</h3>
-    <form method="post">
-        {% csrf_token %}
-        {{ submission_form.as_p }}
-        <button type="submit">Submit Flag</button>
-    </form>
-    <a href="{% url 'ctf:challenge_list' %}">Back to Challenges</a>
-</body>
-</html> 
+{% extends 'ctf/base.html' %}
+
+{% block title %}{{ challenge.title }} - EXCELR8 CTF{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">
+                        {{ challenge.title }}
+                        {% if user_solved %}
+                            <i class="fas fa-check-circle text-success ms-2" title="Solved"></i>
+                        {% endif %}
+                    </h4>
+                </div>
+                <div>
+                    <span class="badge bg-secondary">{{ challenge.category.name }}</span>
+                    <span class="badge score-badge ms-2">{{ challenge.value }} pts</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="challenge-description">
+                    {{ challenge.description|linebreaks }}
+                </div>
+                
+                {% if files %}
+                <div class="mt-4">
+                    <h6><i class="fas fa-file"></i> Attached Files</h6>
+                    <div class="list-group">
+                        {% for file in files %}
+                        <a href="{% url 'ctf:download_file' file.id %}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-download me-2"></i>{{ file.filename }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if hints %}
+                <div class="mt-4">
+                    <h6><i class="fas fa-lightbulb"></i> Hints Available</h6>
+                    {% for hint_data in hints %}
+                        {% if hint_data.unlocked %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-lightbulb text-warning"></i>
+                            {{ hint_data.hint.text }}
+                            <small class="text-muted">({{ hint_data.hint.cost }} points deducted)</small>
+                        </div>
+                        {% else %}
+                        <div class="card border-warning mb-2">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>Hint available ({{ hint_data.hint.cost }} points)</span>
+                                    <form method="post" action="{% url 'ctf:unlock_hint' hint_data.hint.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-unlock"></i> Unlock
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if recent_submissions %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6><i class="fas fa-history"></i> Your Recent Submissions</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Flag</th>
+                                <th>Result</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for submission in recent_submissions %}
+                            <tr>
+                                <td><code>{{ submission.submitted_flag|truncatechars:30 }}</code></td>
+                                <td>
+                                    {% if submission.correct %}
+                                        <span class="badge bg-success">Correct</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Incorrect</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ submission.timestamp|timesince }} ago</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-flag"></i> Submit Flag</h6>
+            </div>
+            <div class="card-body">
+                {% if user_solved %}
+                    <div class="alert alert-success text-center">
+                        <i class="fas fa-trophy fa-3x mb-2"></i>
+                        <h6>Challenge Solved!</h6>
+                        <p class="mb-0">You've already solved this challenge.</p>
+                    </div>
+                {% else %}
+                    <form id="flag-form" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            {{ form.submitted_flag }}
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-paper-plane"></i> Submit Flag
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6><i class="fas fa-info-circle"></i> Challenge Info</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Category:</span>
+                    <span class="badge bg-secondary">{{ challenge.category.name }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Points:</span>
+                    <span class="badge score-badge">{{ challenge.value }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Solves:</span>
+                    <span>{{ challenge.solve_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Attempts:</span>
+                    <span>{{ challenge.attempt_count }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{% url 'ctf:challenge_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> Back to Challenges
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .challenge-description {
+        font-size: 1.1em;
+        line-height: 1.6;
+    }
+    code {
+        background: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    /* Remove any box-shadows from cards on this page */
+    .card {
+        box-shadow: none !important;
+    }
+    .card:hover {
+        box-shadow: none !important;
+    }
+</style>
+{% endblock %}

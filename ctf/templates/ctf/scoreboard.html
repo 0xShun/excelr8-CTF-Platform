@@ -1,0 +1,219 @@
+{% extends 'ctf/base.html' %}
+
+{% block title %}Scoreboard - EXCELR8 CTF{% endblock %}
+
+{% block extra_css %}
+<style>
+    .scoreboard-header {
+        background: rgba(0, 255, 255, 0.05);
+        border: 1px solid var(--accent-primary);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 0 20px var(--accent-glow);
+    }
+    
+    .table {
+        color: var(--text-primary);
+    }
+    
+    .table thead th {
+        background: var(--accent-primary) !important;
+        color: var(--bg-primary) !important;
+        border: none;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .table tbody tr {
+        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .table tbody tr:hover {
+        background: rgba(0, 255, 255, 0.1);
+        /* removed glow shadow */
+        color: white !important;
+    }
+    /* Ensure nested muted/small text also flips to white on hover */
+    .table tbody tr:hover * {
+        color: #ffffff !important;
+    }
+    
+    
+    
+    .team-score {
+        color: var(--accent-primary);
+        font-weight: bold;
+        text-shadow: 0 0 5px var(--accent-glow);
+    }
+    /* Optional subtle highlight for top 3 without Bootstrap's yellow background */
+    .rank-1 { background: rgba(0,255,255,0.10); }
+    .rank-2 { background: rgba(0,255,255,0.06); }
+    .rank-3 { background: rgba(0,255,255,0.03); }
+    .rank-1:hover, .rank-2:hover, .rank-3:hover { background: rgba(0,255,255,0.18); }
+    .scoreboard-table { box-shadow: none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="scoreboard-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2><i class="fas fa-trophy"></i> SCOREBOARD</h2>
+        <div>
+            <button class="btn btn-outline-primary" onclick="refreshScoreboard()">
+                <i class="fas fa-sync-alt"></i> REFRESH
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card scoreboard-table">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-center">#</th>
+                        <th>TEAM</th>
+                        <th>AFFILIATION</th>
+                        <th class="text-center">SCORE</th>
+                        <th class="text-center">SOLVED</th>
+                        <th class="text-center">LAST SOLVE</th>
+                    </tr>
+                </thead>
+                <tbody id="scoreboard-body">
+                    {% for data in team_data %}
+                    <tr class="{% if forloop.counter == 1 %}rank-1{% elif forloop.counter == 2 %}rank-2{% elif forloop.counter == 3 %}rank-3{% endif %}">
+                        <td class="text-center">
+                            <strong>
+                                {% if forloop.counter == 1 %}
+                                    <i class="fas fa-trophy" style="color: gold;"></i>
+                                {% elif forloop.counter == 2 %}
+                                    <i class="fas fa-medal" style="color: silver;"></i>
+                                {% elif forloop.counter == 3 %}
+                                    <i class="fas fa-medal" style="color: #cd7f32;"></i>
+                                {% else %}
+                                    {{ forloop.counter }}
+                                {% endif %}
+                            </strong>
+                        </td>
+                        <td>
+                            <strong>{{ data.team.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ data.team.members.count }} member{{ data.team.members.count|pluralize }}</small>
+                        </td>
+                        <td>
+                            {{ data.team.affiliation|default:"-" }}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge points-badge fs-6 team-score">{{ data.score }}</span>
+                        </td>
+                        <td class="text-center">
+                            <i class="fas fa-check-circle" style="color: var(--accent-primary);"></i> {{ data.solve_count }}
+                        </td>
+                        <td class="text-center">
+                            {% if data.last_solve %}
+                                {{ data.last_solve|timesince }} ago
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h6>No teams registered yet</h6>
+                            <p class="text-muted">Be the first to register a team!</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+<div class="text-center mt-4">
+    <a href="{% url 'ctf:user_stats' %}" class="btn btn-outline-primary">
+        <i class="fas fa-chart-bar"></i> View Your Stats
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshScoreboard() {
+    // Add loading state
+    const refreshBtn = document.querySelector('[onclick="refreshScoreboard()"]');
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    refreshBtn.disabled = true;
+    
+    // Reload the page after a short delay
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    fetch('{% url "ctf:scoreboard_json" %}')
+        .then(response => response.json())
+        .then(data => {
+            // Update scoreboard without full page reload
+            updateScoreboardTable(data.teams);
+        })
+        .catch(error => {
+            console.log('Error updating scoreboard:', error);
+        });
+}, 30000);
+
+function updateScoreboardTable(teams) {
+    const tbody = document.getElementById('scoreboard-body');
+    if (!tbody || !teams) return;
+    
+    let html = '';
+    teams.forEach((team, index) => {
+        const rank = index + 1;
+        let rankIcon = rank;
+        
+        if (rank === 1) rankIcon = '<i class="fas fa-trophy text-warning"></i>';
+        else if (rank === 2) rankIcon = '<i class="fas fa-medal text-secondary"></i>';
+        else if (rank === 3) rankIcon = '<i class="fas fa-medal text-warning"></i>';
+        
+        const rankClass = rank <=3 ? `rank-${rank}` : '';
+        html += `
+            <tr class="${rankClass}">
+                <td class="text-center"><strong>${rankIcon}</strong></td>
+                <td><strong>${team.name}</strong></td>
+                <td>${team.affiliation || '-'}</td>
+                <td class="text-center"><span class="badge score-badge fs-6">${team.score}</span></td>
+                <td class="text-center"><i class="fas fa-check-circle text-success"></i> ${team.solved_count}</td>
+                <td class="text-center">${team.last_solve ? timeAgo(team.last_solve) : '—'}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+function timeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return seconds + ' seconds ago';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + ' minutes ago';
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + ' hours ago';
+    const days = Math.floor(hours / 24);
+    return days + ' days ago';
+}
+</script>
+{% endblock %}

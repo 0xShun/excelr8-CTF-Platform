@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+    db:
+        image: postgres:13
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+        environment:
+            - POSTGRES_DB=ctf_db
+            - POSTGRES_USER=ctf_user
+            - POSTGRES_PASSWORD=ctf_password
+        ports:
+            - "5432:5432"
+
+    redis:
+        image: redis:6-alpine
+        ports:
+            - "6379:6379"
+
+    web:
+        build: .
+        command: gunicorn ctfd_clone.wsgi:application --bind 0.0.0.0:8000
+        volumes:
+            - .:/app
+            - static_volume:/app/staticfiles
+            - media_volume:/app/media
+        ports:
+            - "8000:8000"
+        environment:
+            - DEBUG=False
+            - POSTGRES_DB=ctf_db
+            - POSTGRES_USER=ctf_user
+            - POSTGRES_PASSWORD=ctf_password
+            - POSTGRES_HOST=db
+        depends_on:
+            - db
+            - redis
+
+    nginx:
+        image: nginx:alpine
+        ports:
+            - "80:80"
+        volumes:
+            - ./nginx.conf:/etc/nginx/nginx.conf
+            - static_volume:/app/staticfiles
+            - media_volume:/app/media
+        depends_on:
+            - web
+
+volumes:
+    postgres_data:
+    static_volume:
+    media_volume:

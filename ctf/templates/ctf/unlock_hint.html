@@ -1,16 +1,39 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Unlock Hint</title>
-</head>
-<body>
-    <h1>Unlock Hint</h1>
-    <p>Are you sure you want to unlock this hint?</p>
-    <p>{{ hint.text }} (Cost: {{ hint.cost }})</p>
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit">Unlock</button>
-    </form>
-    <a href="{% url 'ctf:challenge_detail' hint.challenge.pk %}">Back to Challenge</a>
-</body>
-</html> 
+{% extends 'ctf/base.html' %}
+
+{% block title %}Unlock Hint - EXCELR8 CTF{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-lightbulb"></i> Unlock Hint</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Confirm Hint Unlock</strong>
+                </div>
+                
+                <p>You are about to unlock a hint for <strong>{{ hint.challenge.title }}</strong>.</p>
+                
+                <div class="bg-light p-3 rounded mb-3">
+                    <strong>Cost:</strong> {{ hint.cost }} points will be deducted from your score.
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'ctf:challenge_detail' hint.challenge.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    <form method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-unlock"></i> Unlock Hint (-{{ hint.cost }} pts)
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

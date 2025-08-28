@@ -1,0 +1,114 @@
+{% extends 'ctf/base.html' %}
+
+{% block title %}Profile - EXCELR8 CTF{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-user-circle fa-5x text-primary mb-3"></i>
+                <h4>{{ profile.get_display_name }}</h4>
+                <p class="text-muted">{{ user.email }}</p>
+                
+                {% if profile.bio %}
+                <p>{{ profile.bio }}</p>
+                {% endif %}
+                
+                {% if profile.website %}
+                <p><a href="{{ profile.website }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-globe"></i> Website
+                </a></p>
+                {% endif %}
+                
+                <a href="{% url 'ctf:edit_profile' %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-trophy fa-3x mb-3"></i>
+                        <h3>{{ total_score }}</h3>
+                        <p>Total Score</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h3>{{ solved_challenges }}</h3>
+                        <p>Solved</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-3x mb-3"></i>
+                        {% if current_team %}
+                        <h3>1</h3>
+                        <p>Team</p>
+                        {% else %}
+                        <h3>0</h3>
+                        <p>No Team</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if current_team %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-users"></i> Your Team</h5>
+                <form method="post" action="{% url 'ctf:leave_team' %}" onsubmit="return confirm('Leave team {{ current_team.name }}?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-sign-out-alt"></i> Leave</button>
+                </form>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h6 class="mb-1">{{ current_team.name }}</h6>
+                        <small class="text-muted">{{ current_team.affiliation|default:"No affiliation" }}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge score-badge">{{ current_team.total_score }} pts</span><br>
+                        <small class="text-muted">{{ current_team.solved_challenges.count }} solved</small>
+                    </div>
+                </div>
+                <hr>
+                <p class="mb-1"><strong>Members ({{ current_team.members.count }})</strong></p>
+                <ul class="mb-3">
+                    {% for member in current_team.members.all %}
+                    <li>{{ member.username }}</li>
+                    {% endfor %}
+                </ul>
+                <a href="{% url 'ctf:team_join' %}" class="btn btn-outline-secondary btn-sm" disabled>Join Another Team</a>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                <h5>No Teams Yet</h5>
+                <p class="text-muted">Join or create a team to start competing!</p>
+                <a href="{% url 'ctf:team_register' %}" class="btn btn-primary me-2">
+                    <i class="fas fa-plus"></i> Create Team
+                </a>
+                <a href="{% url 'ctf:team_join' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-sign-in-alt"></i> Join Team
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
