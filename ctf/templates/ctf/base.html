@@ -137,19 +137,19 @@
             color: var(--bg-primary);
         }
         
-        .btn-outline-light {
-            border: 2px solid var(--accent-primary);
-            color: var(--accent-primary);
+        .btn-outline-light, .btn-outline-primary, .btn-outline-secondary {
+            border: 2px solid white;
+            color: white;
             background: transparent;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         
-        .btn-outline-light:hover {
-            background: var(--accent-primary);
+        .btn-outline-light:hover, .btn-outline-primary:hover, .btn-outline-secondary:hover {
+            background: white;
             color: var(--bg-primary);
-            box-shadow: 0 0 15px var(--accent-glow);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
         }
         .challenge-card {
             transition: all 0.3s ease;

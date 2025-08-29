@@ -16,7 +16,7 @@
                 {% endif %}
                 
                 {% if profile.website %}
-                <p><a href="{{ profile.website }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                <p><a href="{{ profile.website }}" target="_blank" class="btn btn-outline-light btn-sm">
                     <i class="fas fa-globe"></i> Website
                 </a></p>
                 {% endif %}
@@ -103,7 +103,7 @@
                 <a href="{% url 'ctf:team_register' %}" class="btn btn-primary me-2">
                     <i class="fas fa-plus"></i> Create Team
                 </a>
-                <a href="{% url 'ctf:team_join' %}" class="btn btn-outline-primary">
+                <a href="{% url 'ctf:team_join' %}" class="btn btn-outline-light">
                     <i class="fas fa-sign-in-alt"></i> Join Team
                 </a>
             </div>
