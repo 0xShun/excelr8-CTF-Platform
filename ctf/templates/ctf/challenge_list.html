@@ -94,6 +94,40 @@
     .progress-bar {
         background: linear-gradient(45deg, #667eea, #764ba2);
     }
+
+    /* Themed filter bar and controls */
+    .filters {
+        background: rgba(0, 255, 255, 0.05);
+        border: 1px solid var(--accent-primary);
+        border-radius: 15px;
+        padding: 1rem 1.25rem;
+    }
+    .neon-input,
+    .neon-select {
+        background: var(--bg-secondary) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--accent-primary) !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+    }
+    .neon-input::placeholder { color: var(--text-secondary); }
+    .neon-input:focus,
+    .neon-select:focus {
+        border-color: var(--accent-primary) !important;
+        box-shadow: 0 0 10px var(--accent-glow) !important;
+        outline: none !important;
+    }
+    /* Custom select arrow to avoid default Bootstrap look */
+    .neon-select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%2300FFFF' d='M5.5 7.5L10 12l4.5-4.5'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right .75rem center;
+        background-size: 16px 16px;
+        padding-right: 2.25rem;
+    }
 </style>
 {% endblock %}
 
@@ -108,18 +142,18 @@
 </div>
 
 <!-- Filters -->
-<div class="row mb-4">
+<div class="row mb-4 filters">
     <div class="col-md-6">
         <form method="get" class="d-flex">
-            <input type="search" name="search" class="form-control me-2" placeholder="Search challenges..." value="{{ search_query }}">
-            <button class="btn btn-outline-light" type="submit">
+            <input type="search" name="search" class="neon-input form-control me-2" placeholder="Search challenges..." value="{{ search_query }}">
+            <button class="btn btn-primary" type="submit">
                 <i class="fas fa-search"></i>
             </button>
         </form>
     </div>
     <div class="col-md-6">
         <form method="get">
-            <select name="category" class="form-select" onchange="this.form.submit()">
+            <select name="category" class="neon-select form-select" onchange="this.form.submit()">
                 <option value="">All Categories</option>
                 {% for category in categories %}
                     <option value="{{ category.id }}" {% if category.id|stringformat:"s" == selected_category %}selected{% endif %}>
@@ -135,7 +169,7 @@
 <div class="row">
     {% for challenge in challenges %}
     <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card challenge-card h-100 {% if challenge.user_solved %}solved{% endif %}" onclick="location.href='{% url 'ctf:challenge_detail' challenge.pk %}'">
+        <div class="card challenge-card h-100 {% if challenge.user_solved %}solved{% endif %}" data-href="{% url 'ctf:challenge_detail' challenge.pk %}">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="badge bg-secondary">{{ challenge.category.name }}</span>
                 {% if challenge.user_solved %}
@@ -156,7 +190,7 @@
             <div class="card-footer bg-transparent">
                 <div class="progress" style="height: 5px;">
                     {% widthratio challenge.solve_count 50 100 as solve_percentage %}
-                    <div class="progress-bar" style="width: {{ solve_percentage }}%"></div>
+                    <div class="progress-bar" data-pct="{{ solve_percentage }}"></div>
                 </div>
                 <small class="text-muted">{{ challenge.attempt_count }} total attempts</small>
             </div>
@@ -185,4 +219,25 @@
     </div>
     {% endfor %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Navigate when clicking a challenge card
+    document.querySelectorAll('.challenge-card[data-href]').forEach(function(card){
+        card.addEventListener('click', function(){
+            var href = card.getAttribute('data-href');
+            if (href) window.location.href = href;
+        });
+    });
+
+    // Apply progress widths from data attributes
+    document.querySelectorAll('.progress-bar[data-pct]').forEach(function(bar){
+        var pct = parseFloat(bar.getAttribute('data-pct') || '0');
+        pct = Math.max(0, Math.min(100, isNaN(pct) ? 0 : pct));
+        bar.style.width = pct + '%';
+    });
+});
+</script>
 {% endblock %}

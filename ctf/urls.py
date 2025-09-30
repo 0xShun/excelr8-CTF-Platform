@@ -28,6 +28,7 @@ urlpatterns = [
     # Scoreboard and stats
     path('scoreboard/', views.scoreboard, name='scoreboard'),
     path('scoreboard/json/', views.scoreboard_json, name='scoreboard_json'),
+    path('scoreboard/timeseries/', views.scoreboard_timeseries_json, name='scoreboard_timeseries_json'),
     path('stats/', views.user_stats, name='user_stats'),
     
     # AJAX endpoints

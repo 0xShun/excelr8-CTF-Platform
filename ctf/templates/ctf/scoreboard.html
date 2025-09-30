@@ -69,6 +69,18 @@
     </div>
 </div>
 
+<!-- Score progression chart -->
+<div class="card mb-4" style="border: 1px solid var(--accent-primary); border-radius: 15px; box-shadow: none; background: var(--bg-secondary);">
+    <div class="card-body">
+        <h5 class="mb-3" style="color: var(--accent-primary);"><i class="fas fa-chart-line"></i> Team Score Progression</h5>
+        <canvas id="scoreProgressChart" height="120"></canvas>
+    </div>
+    <div class="card-footer text-muted" style="background: transparent; border-top: 1px solid rgba(0,255,255,0.2);">
+        Tip: Toggle teams by clicking their names in the legend.
+    </div>
+    
+</div>
+
 <div class="card scoreboard-table">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -146,6 +158,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script>
 function refreshScoreboard() {
     // Add loading state
@@ -215,5 +228,61 @@ function timeAgo(dateString) {
     const days = Math.floor(hours / 24);
     return days + ' days ago';
 }
+
+// Score progression chart (multiline)
+document.addEventListener('DOMContentLoaded', function () {
+    const ctx = document.getElementById('scoreProgressChart');
+    if (!ctx || !window.Chart) return;
+
+    const themeColors = [
+        '#00FFFF', '#00D1FF', '#52FFA8', '#FFB703', '#FF6B6B', '#B388FF', '#5EEAD4', '#F472B6', '#60A5FA', '#F59E0B'
+    ];
+
+    function colorFor(idx) { return themeColors[idx % themeColors.length]; }
+
+    function toDataset(series) {
+        return series.map((s, i) => ({
+            label: s.team,
+            data: s.data.map(p => ({ x: p.t, y: p.y })),
+            borderColor: colorFor(i),
+            backgroundColor: 'transparent',
+            tension: 0.25,
+            borderWidth: 2,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+        }));
+    }
+
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'nearest', intersect: false },
+            scales: {
+                x: { type: 'time', time: { unit: 'hour', tooltipFormat: 'MMM d, HH:mm' }, grid: { color: 'rgba(0,255,255,0.1)' }, ticks: { color: 'rgba(255,255,255,0.7)' } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,255,255,0.1)' }, ticks: { color: 'rgba(255,255,255,0.7)' } }
+            },
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.9)' } },
+                tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} pts` } }
+            }
+        }
+    });
+
+    async function loadSeries() {
+        try {
+            const res = await fetch('{% url "ctf:scoreboard_timeseries_json" %}');
+            const json = await res.json();
+            chart.data.datasets = toDataset(json.series);
+            chart.update();
+        } catch (e) { console.log('Chart load error', e); }
+    }
+
+    loadSeries();
+    // refresh every 60s
+    setInterval(loadSeries, 60000);
+});
 </script>
 {% endblock %}

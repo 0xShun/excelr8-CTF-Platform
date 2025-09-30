@@ -2,55 +2,128 @@
 
 {% block title %}Your Statistics - EXCELR8 CTF{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Scoped styles for the stats page to avoid default Bootstrap look */
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        margin-bottom: 1rem;
+        color: var(--accent-primary);
+        text-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .stat-card {
+        position: relative;
+        border: 1px solid var(--accent-primary);
+        background: linear-gradient(180deg, rgba(0,255,255,0.12), rgba(0,255,255,0.05));
+        border-radius: 16px;
+        height: 100%;
+        overflow: hidden;
+    }
+    .stat-card .icon-wrap {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        color: var(--bg-primary);
+        margin: 0 auto .5rem;
+    }
+    .stat-card .value { font-size: 2rem; font-weight: 800; }
+    .stat-card .label { color: var(--text-secondary); letter-spacing: .5px; text-transform: uppercase; font-weight: 700; }
+
+    /* Accent variants (subtle hue shifts) */
+    .stat-a { --local-glow: rgba(0,255,255,.0); }
+    .stat-b { --local-glow: rgba(0,255,200,.0); }
+    .stat-c { --local-glow: rgba(0,220,255,.0); }
+    .stat-d { --local-glow: rgba(255,220,0,.0); }
+
+    .panel {
+        border: 1px solid var(--accent-primary);
+        border-radius: 16px;
+        background: var(--bg-secondary);
+        height: 100%;
+        overflow: hidden; /* ensure children respect rounded corners */
+        background-clip: padding-box;
+    }
+
+    .panel-header {
+        border-bottom: 1px solid var(--accent-primary);
+        background: rgba(0,255,255,0.10);
+        color: var(--accent-primary);
+        padding: .85rem 1rem;
+        font-weight: 700;
+        letter-spacing: .5px;
+        border-top-left-radius: 16px;   /* match parent corners */
+        border-top-right-radius: 16px;  /* match parent corners */
+    }
+    .panel-body { padding: 1rem; }
+
+    .timeline-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: .6rem 0;
+        border-bottom: 1px solid rgba(0,255,255,0.15);
+    }
+    .timeline-item:last-child { border-bottom: 0; }
+    .timeline-item strong { color: var(--text-primary); }
+    .timeline-item small { color: var(--text-secondary); }
+
+    .progress { height: 10px; border-radius: 999px; box-shadow: inset 0 0 10px var(--accent-glow); }
+    .progress-bar { box-shadow: none; }
+
+    /* Remove all div element shadows within this page */
+    .stat-card, .panel, .panel-header, .icon-wrap, .progress, .card, .card-header {
+        box-shadow: none !important;
+    }
+    .progress { box-shadow: none !important; }
+</style>
+{% endblock %}
+
 {% block content %}
-<h2><i class="fas fa-chart-bar"></i> Your Statistics</h2>
+<h2 class="section-title"><i class="fas fa-chart-bar"></i> Your Statistics</h2>
 
 <div class="row mb-4">
     <div class="col-md-3 mb-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body text-center">
-                <i class="fas fa-check-circle fa-3x mb-2"></i>
-                <h3>{{ total_solved }}</h3>
-                <p>Challenges Solved</p>
-            </div>
+        <div class="stat-card stat-a p-3 text-center">
+            <div class="icon-wrap"><i class="fas fa-check-circle fa-lg"></i></div>
+            <div class="value">{{ total_solved }}</div>
+            <div class="label">Challenges Solved</div>
         </div>
     </div>
     <div class="col-md-3 mb-3">
-        <div class="card bg-success text-white">
-            <div class="card-body text-center">
-                <i class="fas fa-users fa-3x mb-2"></i>
-                <h3>{{ teams.count }}</h3>
-                <p>Team{{ teams.count|pluralize }}</p>
-            </div>
+        <div class="stat-card stat-b p-3 text-center">
+            <div class="icon-wrap"><i class="fas fa-users fa-lg"></i></div>
+            <div class="value">{{ teams.count }}</div>
+            <div class="label">Team{{ teams.count|pluralize }}</div>
         </div>
     </div>
     <div class="col-md-3 mb-3">
-        <div class="card bg-info text-white">
-            <div class="card-body text-center">
-                <i class="fas fa-trophy fa-3x mb-2"></i>
-                <h3>{% for team in teams %}{{ team.total_score }}{% if not forloop.last %} + {% endif %}{% endfor %}</h3>
-                <p>Total Points</p>
-            </div>
+        <div class="stat-card stat-c p-3 text-center">
+            <div class="icon-wrap"><i class="fas fa-trophy fa-lg"></i></div>
+            <div class="value">{% for team in teams %}{{ team.total_score }}{% if not forloop.last %} + {% endif %}{% endfor %}</div>
+            <div class="label">Total Points</div>
         </div>
     </div>
     <div class="col-md-3 mb-3">
-        <div class="card bg-warning text-dark">
-            <div class="card-body text-center">
-                <i class="fas fa-clock fa-3x mb-2"></i>
-                <h3>{{ timeline|length }}</h3>
-                <p>Submissions</p>
-            </div>
+        <div class="stat-card stat-d p-3 text-center">
+            <div class="icon-wrap"><i class="fas fa-clock fa-lg"></i></div>
+            <div class="value">{{ timeline|length }}</div>
+            <div class="label">Submissions</div>
         </div>
     </div>
 </div>
 
 <div class="row">
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-chart-pie"></i> Progress by Category</h5>
-            </div>
-            <div class="card-body">
+        <div class="panel">
+            <div class="panel-header"><i class="fas fa-chart-pie"></i> Progress by Category</div>
+            <div class="panel-body">
                 {% for category, stats in solved_by_category.items %}
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-1">
@@ -59,7 +132,7 @@
                     </div>
                     <div class="progress">
                         {% widthratio stats.solved stats.total 100 as percentage %}
-                        <div class="progress-bar" style="width: {{ percentage }}%"></div>
+                        <div class="progress-bar" data-pct="{{ percentage }}"></div>
                     </div>
                 </div>
                 {% endfor %}
@@ -68,13 +141,11 @@
     </div>
     
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-clock"></i> Solve Timeline</h5>
-            </div>
-            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+        <div class="panel">
+            <div class="panel-header"><i class="fas fa-clock"></i> Solve Timeline</div>
+            <div class="panel-body" style="max-height: 400px; overflow-y: auto;">
                 {% for solve in timeline %}
-                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <div class="timeline-item">
                     <div>
                         <strong>{{ solve.challenge__title }}</strong>
                         <br>
@@ -102,10 +173,13 @@
 
 {% block extra_js %}
 <script>
-// Add a simple chart for category progress
-document.addEventListener('DOMContentLoaded', function() {
-    // You could add Chart.js integration here for better visualizations
-    console.log('User stats page loaded');
+// Enhance progress bars without inline styles and add small flair
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.progress-bar[data-pct]')
+        .forEach(el => {
+            const pct = Math.max(0, Math.min(100, parseFloat(el.dataset.pct || '0')));
+            el.style.width = pct + '%';
+        });
 });
 </script>
 {% endblock %}

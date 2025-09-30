@@ -314,6 +314,35 @@ def scoreboard_json(request):
     
     return JsonResponse({'teams': data})
 
+def scoreboard_timeseries_json(request):
+    """JSON API: cumulative score timeseries for each active team"""
+    series = []
+    teams = Team.objects.filter(is_active=True)
+    
+    for team in teams:
+        # accumulate scores over time for correct submissions
+        submissions = Submission.objects.filter(team=team, correct=True) \
+            .select_related('challenge') \
+            .order_by('timestamp')
+        cumulative = 0
+        points = []
+        for s in submissions:
+            # Use challenge value at submission time (approximate current value)
+            cumulative += getattr(s.challenge, 'value', 0)
+            points.append({
+                't': s.timestamp.isoformat(),
+                'y': cumulative,
+            })
+        series.append({
+            'team': team.name,
+            'data': points,
+        })
+    
+    return JsonResponse({
+        'series': series,
+        'generated_at': timezone.now().isoformat(),
+    })
+
 @login_required
 def user_stats(request):
     """User statistics and progress"""
