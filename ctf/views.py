@@ -1,6 +1,9 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login
+from datetime import datetime
+from django.db import connection, DatabaseError
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
@@ -13,7 +16,7 @@ import json
 
 from .models import (
     Challenge, Category, Team, Submission, Hint, HintUnlock, 
-    UserProfile, ChallengeFile, CompetitionSettings
+    UserProfile, ChallengeFile, CompetitionSettings, ServiceInstance
 )
 from django.contrib.auth.hashers import make_password, check_password
 from .forms import (
@@ -32,7 +35,10 @@ def home(request):
         'total_teams': Team.objects.filter(is_active=True).count(),
         'total_users': User.objects.count(),
         'total_solves': total_solves,
-        'recent_solves': Submission.objects.filter(correct=True).order_by('-timestamp')[:5],
+        # Global recent activity: top 4 most recent correct submissions
+        'recent_solves': Submission.objects.filter(correct=True)
+            .select_related('user', 'challenge', 'team')
+            .order_by('-timestamp')[:4],
         'competition_settings': settings,
         'competition_start': settings.start_time.isoformat() if settings.start_time else None,
         'competition_end': settings.end_time.isoformat() if settings.end_time else None,
@@ -57,7 +63,6 @@ def home(request):
         individual_score = max(0, individual_score - hint_cost_total)
         context.update({
             'user_solved_count': user_solves.count(),
-            'recent_solves': user_solves.order_by('-timestamp')[:5],
             'individual_score': individual_score,
         })
     
@@ -68,15 +73,11 @@ def register(request):
     if request.method == 'POST':
         form = CustomUserRegistrationForm(request.POST)
         if form.is_valid():
-            team = form.save(commit=False)
-            # Hash and store team password
-            raw_password = form.cleaned_data.get('team_password')
-            if raw_password:
-                team.password_hash = make_password(raw_password)
-            team.save()
-            team.members.add(request.user)
-            messages.success(request, f'Team "{team.name}" registered successfully!')
-            return redirect('ctf:challenge_list')
+            user = form.save()
+            login(request, user)
+            messages.success(request, 'Account created successfully!')
+            return redirect('ctf:home')
+    else:
         form = CustomUserRegistrationForm()
     return render(request, 'registration/register.html', {'form': form})
 
@@ -112,6 +113,7 @@ def edit_profile(request):
     
     return render(request, 'ctf/edit_profile.html', {'form': form})
 
+@login_required
 def team_register(request):
     """Team registration view"""
     # Enforce single-team membership
@@ -306,7 +308,8 @@ def scoreboard_json(request):
             'name': team.name,
             'score': team.total_score,
             'solved_count': team.solved_challenges.count(),
-            'last_solve': team.last_solve_time.isoformat() if team.last_solve_time else None
+            'last_solve': team.last_solve_time.isoformat() if team.last_solve_time else None,
+            'affiliation': team.affiliation or ''
         })
     
     # Sort by score descending, then by last solve time ascending
@@ -315,33 +318,48 @@ def scoreboard_json(request):
     return JsonResponse({'teams': data})
 
 def scoreboard_timeseries_json(request):
-    """JSON API: cumulative score timeseries for each active team"""
+    """JSON API: cumulative score timeseries for each active team.
+
+    Includes submissions linked directly to the team or made by any current
+    team member (covering older data where Submission.team may be null).
+    """
+    from django.db.models import Q
+
     series = []
     teams = Team.objects.filter(is_active=True)
-    
+
     for team in teams:
-        # accumulate scores over time for correct submissions
-        submissions = Submission.objects.filter(team=team, correct=True) \
-            .select_related('challenge') \
-            .order_by('timestamp')
+        member_ids = list(team.members.values_list('id', flat=True))
+        submissions = (
+            Submission.objects.filter(
+                Q(correct=True) & (Q(team=team) | Q(user_id__in=member_ids))
+            )
+            .select_related('challenge')
+            .order_by('timestamp', 'id')
+        )
+
         cumulative = 0
         points = []
+        seen_ids = set()
+
+        # Baseline at team registration (y=0)
+        baseline_t = (team.registered_at or timezone.now()).isoformat()
+        points.append({'t': baseline_t, 'y': 0})
+
         for s in submissions:
-            # Use challenge value at submission time (approximate current value)
+            # De-dupe in case a submission matches both OR branches
+            if s.id in seen_ids:
+                continue
+            seen_ids.add(s.id)
             cumulative += getattr(s.challenge, 'value', 0)
-            points.append({
-                't': s.timestamp.isoformat(),
-                'y': cumulative,
-            })
-        series.append({
-            'team': team.name,
-            'data': points,
-        })
-    
-    return JsonResponse({
-        'series': series,
-        'generated_at': timezone.now().isoformat(),
-    })
+            points.append({'t': s.timestamp.isoformat(), 'y': cumulative})
+
+        # Extend to 'now' so the line reaches current time
+        points.append({'t': timezone.now().isoformat(), 'y': cumulative})
+
+        series.append({'team': team.name, 'data': points})
+
+    return JsonResponse({'series': series, 'generated_at': timezone.now().isoformat()})
 
 @login_required
 def user_stats(request):
@@ -440,3 +458,243 @@ def challenge_stats_json(request, pk):
     }
     
     return JsonResponse(data)
+
+
+# =========================
+# Admin Platform Views
+# =========================
+
+def _table_exists(model_cls):
+    try:
+        return model_cls._meta.db_table in connection.introspection.table_names()
+    except Exception:
+        return False
+
+
+@staff_member_required
+def admin_dashboard(request):
+    settings = CompetitionSettings.get_settings()
+    context = {
+        'settings': settings,
+        'counts': {
+            'users': User.objects.count(),
+            'teams': Team.objects.count(),
+            'challenges': Challenge.objects.count(),
+            'submissions': Submission.objects.count(),
+            'instances': ServiceInstance.objects.count() if _table_exists(ServiceInstance) else 0,
+        }
+    }
+    return render(request, 'ctf/admin_plat/dashboard.html', context)
+
+
+@staff_member_required
+def admin_users(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+        if action and user_id:
+            u = get_object_or_404(User, pk=user_id)
+            if action == 'promote':
+                u.is_staff = True
+                messages.success(request, f'Promoted {u.username} to staff.')
+            elif action == 'demote':
+                u.is_staff = False
+                messages.success(request, f'Demoted {u.username} from staff.')
+            elif action == 'activate':
+                u.is_active = True
+                messages.success(request, f'Activated {u.username}.')
+            elif action == 'deactivate':
+                u.is_active = False
+                messages.success(request, f'Deactivated {u.username}.')
+            elif action == 'delete':
+                username = u.username
+                u.delete()
+                messages.success(request, f'Deleted user {username}.')
+                return redirect('ctf:admin_users')
+            u.save()
+            return redirect('ctf:admin_users')
+    users = User.objects.all().select_related('userprofile')
+    teams = Team.objects.all().prefetch_related('members')
+    return render(request, 'ctf/admin_plat/users.html', {'users': users, 'teams': teams})
+
+
+@staff_member_required
+def admin_competition(request):
+    settings = CompetitionSettings.get_settings()
+    if request.method == 'POST':
+        # Text/number fields
+        settings.competition_name = request.POST.get('competition_name', settings.competition_name)
+        settings.description = request.POST.get('description', settings.description)
+        try:
+            settings.max_team_size = int(request.POST.get('max_team_size', settings.max_team_size))
+        except (TypeError, ValueError):
+            pass
+
+        # Boolean toggles: treat absence as False
+        settings.registration_enabled = 'registration_enabled' in request.POST
+        settings.team_registration_enabled = 'team_registration_enabled' in request.POST
+        settings.freeze_scoreboard = 'freeze_scoreboard' in request.POST
+        settings.show_scoreboard = 'show_scoreboard' in request.POST
+
+        # Time fields (allow clearing freeze_time)
+        for tf in ['start_time', 'end_time', 'freeze_time']:
+            v = request.POST.get(tf, '')
+            if v:
+                try:
+                    dt = datetime.fromisoformat(v)
+                    aware = timezone.make_aware(dt)
+                    setattr(settings, tf, aware)
+                except Exception:
+                    # leave unchanged on parse error
+                    pass
+            else:
+                if tf == 'freeze_time':
+                    setattr(settings, tf, None)
+        settings.save()
+        messages.success(request, 'Competition settings updated.')
+        return redirect('ctf:admin_competition')
+    return render(request, 'ctf/admin_plat/competition.html', {'settings': settings})
+
+
+@staff_member_required
+def admin_challenges(request):
+    challenges = Challenge.objects.select_related('category').all()
+    categories = Category.objects.all()
+    return render(request, 'ctf/admin_plat/challenges.html', {'challenges': challenges, 'categories': categories})
+
+
+@staff_member_required
+def admin_challenge_new(request):
+    categories = Category.objects.all()
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        description = request.POST.get('description', '').strip()
+        category_id = request.POST.get('category')
+        value = int(request.POST.get('value') or 100)
+        difficulty = request.POST.get('difficulty', 'medium')
+        flag = request.POST.get('flag', '')
+        case_sensitive = request.POST.get('case_sensitive') == 'on'
+        hidden = request.POST.get('hidden') == 'on'
+        connection_info = request.POST.get('connection_info', '')
+        author = request.POST.get('author', '')
+
+        category = get_object_or_404(Category, pk=category_id)
+        ch = Challenge.objects.create(
+            title=title,
+            description=description,
+            category=category,
+            value=value,
+            difficulty=difficulty,
+            flag=flag,
+            case_sensitive=case_sensitive,
+            hidden=hidden,
+            connection_info=connection_info,
+            author=author,
+        )
+        messages.success(request, 'Challenge created.')
+        return redirect('ctf:admin_challenges')
+    return render(request, 'ctf/admin_plat/challenge_form.html', {'categories': categories})
+
+
+@staff_member_required
+def admin_challenge_edit(request, pk):
+    ch = get_object_or_404(Challenge, pk=pk)
+    categories = Category.objects.all()
+    if request.method == 'POST':
+        subaction = request.POST.get('subaction')
+        if subaction == 'upload_file' and request.FILES.get('file'):
+            ChallengeFile.objects.create(challenge=ch, file=request.FILES['file'])
+            messages.success(request, 'File uploaded.')
+            return redirect('ctf:admin_challenge_edit', pk=ch.id)
+        elif subaction == 'delete_file':
+            fid = request.POST.get('file_id')
+            if fid:
+                fobj = get_object_or_404(ChallengeFile, pk=fid, challenge=ch)
+                fobj.delete()
+                messages.success(request, 'File deleted.')
+                return redirect('ctf:admin_challenge_edit', pk=ch.id)
+        else:
+            ch.title = request.POST.get('title', ch.title)
+            ch.description = request.POST.get('description', ch.description)
+            cat_id = request.POST.get('category')
+            if cat_id:
+                ch.category = get_object_or_404(Category, pk=cat_id)
+            ch.value = int(request.POST.get('value') or ch.value)
+            ch.difficulty = request.POST.get('difficulty', ch.difficulty)
+            ch.flag = request.POST.get('flag', ch.flag)
+            ch.case_sensitive = request.POST.get('case_sensitive') == 'on'
+            ch.hidden = request.POST.get('hidden') == 'on'
+            ch.connection_info = request.POST.get('connection_info', ch.connection_info)
+            ch.author = request.POST.get('author', ch.author)
+            ch.save()
+            messages.success(request, 'Challenge updated.')
+            return redirect('ctf:admin_challenges')
+    files = ch.files.all()
+    return render(request, 'ctf/admin_plat/challenge_form.html', {'challenge': ch, 'categories': categories, 'files': files})
+
+
+@staff_member_required
+def admin_instances(request):
+    if not _table_exists(ServiceInstance):
+        messages.warning(request, 'ServiceInstance table not created yet. Please run migrations to enable instance management.')
+        instances = []
+        return render(request, 'ctf/admin_plat/instances.html', {'instances': instances, 'challenges': Challenge.objects.all()})
+    instances = ServiceInstance.objects.select_related('challenge', 'requested_by').all()
+    if request.method == 'POST':
+        # Minimal state changes (start/stop) and connection info updates
+        action = request.POST.get('action')
+        inst_id = request.POST.get('id')
+        if action == 'create':
+            ch_id = request.POST.get('challenge')
+            if ch_id:
+                ch = get_object_or_404(Challenge, pk=ch_id)
+                inst = ServiceInstance.objects.create(
+                    challenge=ch,
+                    requested_by=request.user,
+                    status='stopped',
+                    host=request.POST.get('host', ''),
+                    port=(int(request.POST.get('port')) if request.POST.get('port') else None),
+                    notes=request.POST.get('notes', ''),
+                )
+                messages.success(request, f'Instance created for {ch.title}.')
+                return redirect('ctf:admin_instances')
+        elif action and inst_id:
+            inst = get_object_or_404(ServiceInstance, pk=inst_id)
+            if action in ['start', 'stop']:
+                inst.status = 'starting' if action == 'start' else 'stopping'
+                messages.info(request, f'Instance {action} requested for {inst.challenge.title}.')
+            elif action == 'save':
+                inst.host = request.POST.get('host', inst.host)
+                port = request.POST.get('port')
+                inst.port = int(port) if port else None
+                inst.status = request.POST.get('status', inst.status)
+                inst.notes = request.POST.get('notes', inst.notes)
+                messages.success(request, 'Instance updated.')
+            inst.save()
+            return redirect('ctf:admin_instances')
+    return render(request, 'ctf/admin_plat/instances.html', {'instances': instances, 'challenges': Challenge.objects.all()})
+
+
+@staff_member_required
+def admin_categories(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if name:
+            Category.objects.get_or_create(name=name)
+            messages.success(request, f'Category "{name}" added.')
+            return redirect('ctf:admin_categories')
+    cats = Category.objects.all()
+    return render(request, 'ctf/admin_plat/categories.html', {'categories': cats})
+
+
+@staff_member_required
+def admin_category_delete(request, pk):
+    cat = get_object_or_404(Category, pk=pk)
+    if request.method == 'POST':
+        if not cat.challenges.exists():
+            cat.delete()
+            messages.success(request, 'Category deleted.')
+        else:
+            messages.error(request, 'Cannot delete a category with challenges.')
+        return redirect('ctf:admin_categories')
+    return render(request, 'ctf/admin_plat/categories.html', {'categories': Category.objects.all()})

@@ -299,3 +299,33 @@ class HintUnlock(models.Model):
 
     def __str__(self):
         return f"{self.user.username} unlocked hint for {self.hint.challenge.title}"
+
+
+class ServiceInstance(models.Model):
+    """Tracks per-challenge service instances (for infra-backed challenges).
+
+    This model does not itself start containers; it records desired state and
+    connection info so the platform can display/manage instances.
+    """
+    STATUS_CHOICES = (
+        ('stopped', 'Stopped'),
+        ('starting', 'Starting'),
+        ('running', 'Running'),
+        ('stopping', 'Stopping'),
+        ('error', 'Error'),
+    )
+
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name='instances')
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='service_instances')
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='stopped')
+    host = models.CharField(max_length=255, blank=True, help_text="Hostname or IP where the service is exposed")
+    port = models.PositiveIntegerField(null=True, blank=True, help_text="Exposed port")
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Instance for {self.challenge.title} ({self.status})"

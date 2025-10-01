@@ -1,0 +1,29 @@
+{% extends 'ctf/base.html' %}
+{% block title %}Admin - Categories{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="fas fa-folder-tree"></i> Categories</h4>
+  <form method="post" class="d-flex gap-2">
+    {% csrf_token %}
+    <input class="form-control" name="name" placeholder="New category name" required />
+    <button class="btn btn-primary"><i class="fas fa-plus"></i> Add</button>
+  </form>
+</div>
+<div class="card">
+  <div class="card-body">
+    <ul class="list-group list-group-flush">
+      {% for c in categories %}
+      <li class="list-group-item bg-transparent text-light d-flex justify-content-between align-items-center">
+        <span>{{ c.name }}</span>
+        <form method="post" action="{% url 'ctf:admin_category_delete' c.id %}">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-outline-light"><i class="fas fa-trash"></i> Delete</button>
+        </form>
+      </li>
+      {% empty %}
+      <li class="list-group-item bg-transparent text-light">No categories yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'ctf/base.html' %}
+{% block title %}Admin Platform - Dashboard{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-12 mb-4">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-tools"></i> Admin Platform</h5>
+        <div>
+          <a class="btn btn-primary btn-sm" href="{% url 'ctf:admin_competition' %}"><i class="fas fa-flag-checkered"></i> Competition</a>
+          <a class="btn btn-primary btn-sm" href="{% url 'ctf:admin_challenges' %}"><i class="fas fa-puzzle-piece"></i> Challenges</a>
+          <a class="btn btn-primary btn-sm" href="{% url 'ctf:admin_categories' %}"><i class="fas fa-folder-tree"></i> Categories</a>
+          <a class="btn btn-primary btn-sm" href="{% url 'ctf:admin_users' %}"><i class="fas fa-users"></i> Users & Teams</a>
+          <a class="btn btn-primary btn-sm" href="{% url 'ctf:admin_instances' %}"><i class="fas fa-server"></i> Instances</a>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-md-2 col-6 mb-3"><div class="stat-number">{{ counts.users }}</div><div class="stat-label">Users</div></div>
+          <div class="col-md-2 col-6 mb-3"><div class="stat-number">{{ counts.teams }}</div><div class="stat-label">Teams</div></div>
+          <div class="col-md-2 col-6 mb-3"><div class="stat-number">{{ counts.challenges }}</div><div class="stat-label">Challenges</div></div>
+          <div class="col-md-3 col-6 mb-3"><div class="stat-number">{{ counts.submissions }}</div><div class="stat-label">Submissions</div></div>
+          <div class="col-md-3 col-12 mb-3"><div class="stat-number">{{ counts.instances }}</div><div class="stat-label">Instances</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

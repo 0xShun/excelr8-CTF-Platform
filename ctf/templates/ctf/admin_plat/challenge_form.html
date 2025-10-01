@@ -1,0 +1,98 @@
+{% extends 'ctf/base.html' %}
+{% block title %}Admin - Challenge{% endblock %}
+{% block content %}
+<form method="post" class="card" enctype="multipart/form-data">
+  {% csrf_token %}
+  <div class="card-header"><i class="fas fa-puzzle-piece"></i> {% if challenge %}Edit{% else %}New{% endif %} Challenge</div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Title</label>
+        <input class="form-control" name="title" value="{{ challenge.title|default:'' }}" required />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Category</label>
+        <select class="form-control" name="category" required>
+          {% for c in categories %}
+          <option value="{{ c.id }}" {% if challenge and challenge.category.id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-12">
+        <label class="form-label">Description (Markdown)</label>
+        <textarea class="form-control" name="description" rows="6">{{ challenge.description|default:'' }}</textarea>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Value</label>
+        <input class="form-control" type="number" name="value" value="{{ challenge.value|default:100 }}" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Difficulty</label>
+        <select class="form-control" name="difficulty">
+          <option value="easy" {% if challenge and challenge.difficulty=='easy' %}selected{% endif %}>Easy</option>
+          <option value="medium" {% if not challenge or challenge.difficulty=='medium' %}selected{% endif %}>Medium</option>
+          <option value="hard" {% if challenge and challenge.difficulty=='hard' %}selected{% endif %}>Hard</option>
+          <option value="expert" {% if challenge and challenge.difficulty=='expert' %}selected{% endif %}>Expert</option>
+        </select>
+      </div>
+      <div class="col-md-4 d-flex align-items-center">
+        <div class="form-check mt-4">
+          <input class="form-check-input" type="checkbox" name="hidden" {% if challenge and challenge.hidden %}checked{% endif %} />
+          <label class="form-check-label">Hidden</label>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Flag</label>
+        <input class="form-control" name="flag" value="{{ challenge.flag|default:'' }}" />
+      </div>
+      <div class="col-md-6 d-flex align-items-center">
+        <div class="form-check mt-4">
+          <input class="form-check-input" type="checkbox" name="case_sensitive" {% if challenge and challenge.case_sensitive %}checked{% endif %} />
+          <label class="form-check-label">Case Sensitive</label>
+        </div>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Connection Info (host:port, etc.)</label>
+        <input class="form-control" name="connection_info" value="{{ challenge.connection_info|default:'' }}"/>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Author</label>
+        <input class="form-control" name="author" value="{{ challenge.author|default:'' }}" />
+      </div>
+    </div>
+  </div>
+  <div class="card-footer d-flex justify-content-end">
+    <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Save</button>
+  </div>
+</form>
+{% if challenge %}
+<div class="card mt-3">
+  <div class="card-header"><i class="fas fa-file"></i> Files</div>
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" class="mb-3">
+      {% csrf_token %}
+      <input type="hidden" name="subaction" value="upload_file" />
+      <div class="row g-2">
+        <div class="col-md-8"><input class="form-control" type="file" name="file" required /></div>
+        <div class="col-md-4 text-end"><button class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button></div>
+      </div>
+    </form>
+    <ul class="list-group list-group-flush">
+      {% for f in files %}
+      <li class="list-group-item bg-transparent text-light d-flex justify-content-between align-items-center">
+        <span>{{ f.filename|default:f.file.name }}</span>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="subaction" value="delete_file" />
+          <input type="hidden" name="file_id" value="{{ f.id }}" />
+          <button class="btn btn-sm btn-outline-light"><i class="fas fa-trash"></i> Delete</button>
+        </form>
+      </li>
+      {% empty %}
+      <li class="list-group-item bg-transparent text-light">No files uploaded.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

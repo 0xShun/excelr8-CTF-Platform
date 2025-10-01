@@ -1,0 +1,73 @@
+{% extends 'ctf/base.html' %}
+{% block title %}Admin - Instances{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header"><i class="fas fa-server"></i> Service Instances</div>
+  <div class="card-body">
+    <form method="post" class="row g-2 mb-3">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create" />
+      <div class="col-md-4">
+        <select class="form-control" name="challenge" required>
+          <option value="" disabled selected>Select Challenge</option>
+          {% for ch in challenges %}
+          <option value="{{ ch.id }}">{{ ch.title }} ({{ ch.category.name }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3"><input class="form-control" name="host" placeholder="Host" /></div>
+      <div class="col-md-2"><input class="form-control" name="port" type="number" placeholder="Port" /></div>
+      <div class="col-md-3 text-end"><button class="btn btn-primary"><i class="fas fa-plus"></i> Create Instance</button></div>
+    </form>
+    <div class="table-responsive">
+      <table class="table table-dark table-striped align-middle">
+        <thead><tr><th>Challenge</th><th>Status</th><th>Host</th><th>Port</th><th>Requested By</th><th>Updated</th><th></th></tr></thead>
+        <tbody>
+          {% for inst in instances %}
+          <tr>
+            <td>{{ inst.challenge.title }}</td>
+            <td>{{ inst.get_status_display }}</td>
+            <td>{{ inst.host|default:'-' }}</td>
+            <td>{{ inst.port|default:'-' }}</td>
+            <td>{{ inst.requested_by.username|default:'-' }}</td>
+            <td>{{ inst.updated_at|date:'Y-m-d H:i' }}</td>
+            <td class="text-end">
+              <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{ inst.id }}" />
+                <button class="btn btn-sm btn-primary" name="action" value="start"><i class="fas fa-play"></i> Start</button>
+                <button class="btn btn-sm btn-outline-secondary" name="action" value="stop"><i class="fas fa-stop"></i> Stop</button>
+              </form>
+              <button class="btn btn-sm btn-outline-light" data-bs-toggle="collapse" data-bs-target="#edit{{ inst.id }}"><i class="fas fa-edit"></i> Edit</button>
+            </td>
+          </tr>
+          <tr class="collapse bg-transparent" id="edit{{ inst.id }}">
+            <td colspan="7">
+              <form method="post" class="row g-2">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{ inst.id }}" />
+                <div class="col-md-3"><input class="form-control" name="host" placeholder="Host" value="{{ inst.host }}"/></div>
+                <div class="col-md-2"><input class="form-control" name="port" type="number" placeholder="Port" value="{{ inst.port }}"/></div>
+                <div class="col-md-3">
+                  <select class="form-control" name="status">
+                    <option value="stopped" {% if inst.status=='stopped' %}selected{% endif %}>Stopped</option>
+                    <option value="starting" {% if inst.status=='starting' %}selected{% endif %}>Starting</option>
+                    <option value="running" {% if inst.status=='running' %}selected{% endif %}>Running</option>
+                    <option value="stopping" {% if inst.status=='stopping' %}selected{% endif %}>Stopping</option>
+                    <option value="error" {% if inst.status=='error' %}selected{% endif %}>Error</option>
+                  </select>
+                </div>
+                <div class="col-md-4"><input class="form-control" name="notes" placeholder="Notes" value="{{ inst.notes }}"/></div>
+                <div class="col-12 text-end"><button class="btn btn-primary" name="action" value="save"><i class="fas fa-save"></i> Save</button></div>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted">No instances yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

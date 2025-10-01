@@ -4,101 +4,100 @@
 
 {% block extra_css %}
 <style>
-    .scoreboard-header {
+    /* Layout */
+    .scoreboard-header { 
         background: rgba(0, 255, 255, 0.05);
         border: 1px solid var(--accent-primary);
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
+        border-radius: 14px;
+        padding: 16px 18px;
+        margin-bottom: 20px;
         box-shadow: 0 0 20px var(--accent-glow);
+        display: flex; align-items: center; justify-content: space-between;
     }
-    
-    .table {
-        color: var(--text-primary);
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+
+    /* Neon button */
+    .neon-btn {
+        appearance: none; border: 1px solid var(--accent-primary); color: var(--accent-primary);
+        background: transparent; padding: 8px 14px; border-radius: 10px; font-weight: 700;
+        letter-spacing: .04em; text-transform: uppercase; transition: box-shadow .2s, background .2s, color .2s;
+        box-shadow: 0 0 12px rgba(0,255,255,.15) inset, 0 0 10px rgba(0,255,255,.15);
     }
-    
-    .table thead th {
-        background: var(--accent-primary) !important;
-        color: var(--bg-primary) !important;
-        border: none;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+    .neon-btn:hover { background: rgba(0,255,255,.12); color: #fff; box-shadow: 0 0 18px var(--accent-glow), 0 0 12px rgba(0,255,255,.35) inset; }
+    .neon-btn:disabled { opacity: .7; cursor: not-allowed; }
+
+    /* Panel (chart + table wrappers) */
+    .panel { 
+        border: 1px solid var(--accent-primary); border-radius: 14px; background: var(--bg-secondary);
+        overflow: hidden; box-shadow: none; margin-bottom: 18px;
     }
-    
-    .table tbody tr {
-        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-        transition: all 0.3s ease;
+    .panel-header { padding: 12px 16px; background: rgba(0,255,255,.08); color: var(--accent-primary);
+        font-weight: 700; letter-spacing: .04em; display: flex; align-items: center; gap: 8px; }
+    .panel-body { padding: 14px 16px; }
+    .panel-footer { padding: 10px 16px; border-top: 1px solid rgba(0,255,255,.18); color: var(--text-muted); background: transparent; }
+
+    /* Neon table (no Bootstrap) */
+    table.neon-table { width: 100%; border-collapse: collapse; color: var(--text-primary); }
+    .neon-table thead th {
+        background: var(--accent-primary); color: var(--bg-primary); border: none; padding: 10px 12px;
+        text-transform: uppercase; letter-spacing: .06em; font-weight: 800; font-size: 0.9rem;
     }
-    
-    .table tbody tr:hover {
-        background: rgba(0, 255, 255, 0.1);
-        /* removed glow shadow */
-        color: white !important;
-    }
-    /* Ensure nested muted/small text also flips to white on hover */
-    .table tbody tr:hover * {
-        color: #ffffff !important;
-    }
-    
-    
-    
-    .team-score {
-        color: var(--accent-primary);
-        font-weight: bold;
-        text-shadow: 0 0 5px var(--accent-glow);
-    }
-    /* Optional subtle highlight for top 3 without Bootstrap's yellow background */
+    .neon-table tbody td { padding: 12px; border-bottom: 1px solid rgba(0,255,255,.18); }
+    .neon-table tbody tr { transition: background .2s ease, color .2s ease; }
+    .neon-table tbody tr:hover { background: rgba(0,255,255,.08); color: #fff; }
+    .center { text-align: center; }
+    .muted { color: var(--text-muted); font-size: .85rem; }
+    .team-score { color: var(--accent-primary); font-weight: 800; text-shadow: 0 0 5px var(--accent-glow); display: inline-block; padding: 4px 8px; border: 1px solid var(--accent-primary); border-radius: 8px; }
+
+    /* Top 3 subtle highlight */
     .rank-1 { background: rgba(0,255,255,0.10); }
     .rank-2 { background: rgba(0,255,255,0.06); }
     .rank-3 { background: rgba(0,255,255,0.03); }
     .rank-1:hover, .rank-2:hover, .rank-3:hover { background: rgba(0,255,255,0.18); }
-    .scoreboard-table { box-shadow: none !important; }
+
+    /* Utility */
+    .stack { display:flex; align-items:center; gap:6px; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="scoreboard-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <h2><i class="fas fa-trophy"></i> SCOREBOARD</h2>
-        <div>
-            <button class="btn btn-outline-light" onclick="refreshScoreboard()">
-                <i class="fas fa-sync-alt"></i> REFRESH
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Score progression chart -->
-<div class="card mb-4" style="border: 1px solid var(--accent-primary); border-radius: 15px; box-shadow: none; background: var(--bg-secondary);">
-    <div class="card-body">
-        <h5 class="mb-3" style="color: var(--accent-primary);"><i class="fas fa-chart-line"></i> Team Score Progression</h5>
-        <canvas id="scoreProgressChart" height="120"></canvas>
-    </div>
-    <div class="card-footer text-muted" style="background: transparent; border-top: 1px solid rgba(0,255,255,0.2);">
-        Tip: Toggle teams by clicking their names in the legend.
+    <h2 class="stack"><i class="fas fa-trophy"></i> SCOREBOARD</h2>
+    <div class="header-actions">
+        <button id="refreshScoreboardBtn" class="neon-btn"><i class="fas fa-sync-alt"></i> Refresh</button>
     </div>
     
 </div>
 
-<div class="card scoreboard-table">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
+<!-- Score progression chart -->
+<div class="panel">
+    <div class="panel-header"><i class="fas fa-chart-line"></i> Team Score Progression</div>
+    <div class="panel-body">
+        <div style="height: 260px;">
+            <canvas id="scoreProgressChart"></canvas>
+        </div>
+    </div>
+    <div class="panel-footer">Tip: Toggle teams by clicking their names in the legend.</div>
+</div>
+
+<div class="panel">
+    <div class="panel-body" style="padding:0;">
+        <div style="overflow-x:auto;">
+            <table class="neon-table">
                 <thead>
                     <tr>
-                        <th class="text-center">#</th>
+                        <th class="center">#</th>
                         <th>TEAM</th>
                         <th>AFFILIATION</th>
-                        <th class="text-center">SCORE</th>
-                        <th class="text-center">SOLVED</th>
-                        <th class="text-center">LAST SOLVE</th>
+                        <th class="center">SCORE</th>
+                        <th class="center">SOLVED</th>
+                        <th class="center">LAST SOLVE</th>
                     </tr>
                 </thead>
                 <tbody id="scoreboard-body">
                     {% for data in team_data %}
                     <tr class="{% if forloop.counter == 1 %}rank-1{% elif forloop.counter == 2 %}rank-2{% elif forloop.counter == 3 %}rank-3{% endif %}">
-                        <td class="text-center">
+                        <td class="center">
                             <strong>
                                 {% if forloop.counter == 1 %}
                                     <i class="fas fa-trophy" style="color: gold;"></i>
@@ -113,32 +112,19 @@
                         </td>
                         <td>
                             <strong>{{ data.team.name }}</strong>
-                            <br>
-                            <small class="text-muted">{{ data.team.members.count }} member{{ data.team.members.count|pluralize }}</small>
+                            <div class="muted">{{ data.team.members.count }} member{{ data.team.members.count|pluralize }}</div>
                         </td>
-                        <td>
-                            {{ data.team.affiliation|default:"-" }}
-                        </td>
-                        <td class="text-center">
-                            <span class="badge points-badge fs-6 team-score">{{ data.score }}</span>
-                        </td>
-                        <td class="text-center">
-                            <i class="fas fa-check-circle" style="color: var(--accent-primary);"></i> {{ data.solve_count }}
-                        </td>
-                        <td class="text-center">
-                            {% if data.last_solve %}
-                                {{ data.last_solve|timesince }} ago
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
+                        <td>{{ data.team.affiliation|default:"-" }}</td>
+                        <td class="center"><span class="team-score">{{ data.score }}</span></td>
+                        <td class="center"><i class="fas fa-check-circle" style="color: var(--accent-primary);"></i> {{ data.solve_count }}</td>
+                        <td class="center">{% if data.last_solve %}{{ data.last_solve|timesince }} ago{% else %}-{% endif %}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-4">
-                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                            <h6>No teams registered yet</h6>
-                            <p class="text-muted">Be the first to register a team!</p>
+                        <td colspan="6" class="center" style="padding: 24px;">
+                            <div class="muted"><i class="fas fa-users fa-lg"></i></div>
+                            <div>No teams registered yet</div>
+                            <div class="muted">Be the first to register a team!</div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -146,13 +132,12 @@
             </table>
         </div>
     </div>
+    
 </div>
 
 {% if user.is_authenticated %}
-<div class="text-center mt-4">
-    <a href="{% url 'ctf:user_stats' %}" class="btn btn-outline-light">
-        <i class="fas fa-chart-bar"></i> View Your Stats
-    </a>
+<div class="center" style="margin-top: 18px;">
+    <a href="{% url 'ctf:user_stats' %}" class="neon-btn"><i class="fas fa-chart-bar"></i> View Your Stats</a>
 </div>
 {% endif %}
 {% endblock %}
@@ -160,31 +145,31 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script>
-function refreshScoreboard() {
-    // Add loading state
-    const refreshBtn = document.querySelector('[onclick="refreshScoreboard()"]');
-    const originalText = refreshBtn.innerHTML;
-    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-    refreshBtn.disabled = true;
-    
-    // Reload the page after a short delay
-    setTimeout(() => {
-        location.reload();
-    }, 1000);
+// Unified AJAX refresh: updates table and chart without reloading the page
+async function refreshAll() {
+    const btn = document.getElementById('refreshScoreboardBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing'; }
+    try {
+        const [tableRes, chartRes] = await Promise.all([
+            fetch('{% url "ctf:scoreboard_json" %}'),
+            fetch('{% url "ctf:scoreboard_timeseries_json" %}')
+        ]);
+        const tableJson = await tableRes.json();
+        const chartJson = await chartRes.json();
+        updateScoreboardTable(tableJson.teams);
+        if (window._scoreChart && chartJson.series) {
+            window._scoreChart.data.datasets = toDataset(chartJson.series);
+            window._scoreChart.update();
+        }
+    } catch (e) {
+        console.log('Refresh error', e);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i> REFRESH'; }
+    }
 }
 
 // Auto-refresh every 30 seconds
-setInterval(() => {
-    fetch('{% url "ctf:scoreboard_json" %}')
-        .then(response => response.json())
-        .then(data => {
-            // Update scoreboard without full page reload
-            updateScoreboardTable(data.teams);
-        })
-        .catch(error => {
-            console.log('Error updating scoreboard:', error);
-        });
-}, 30000);
+setInterval(refreshAll, 30000);
 
 function updateScoreboardTable(teams) {
     const tbody = document.getElementById('scoreboard-body');
@@ -195,19 +180,19 @@ function updateScoreboardTable(teams) {
         const rank = index + 1;
         let rankIcon = rank;
         
-        if (rank === 1) rankIcon = '<i class="fas fa-trophy text-warning"></i>';
-        else if (rank === 2) rankIcon = '<i class="fas fa-medal text-secondary"></i>';
-        else if (rank === 3) rankIcon = '<i class="fas fa-medal text-warning"></i>';
+        if (rank === 1) rankIcon = '<i class="fas fa-trophy" style="color:gold;"></i>';
+        else if (rank === 2) rankIcon = '<i class="fas fa-medal" style="color:silver;"></i>';
+        else if (rank === 3) rankIcon = '<i class="fas fa-medal" style="color:#cd7f32;"></i>';
         
         const rankClass = rank <=3 ? `rank-${rank}` : '';
         html += `
             <tr class="${rankClass}">
-                <td class="text-center"><strong>${rankIcon}</strong></td>
+                <td class="center"><strong>${rankIcon}</strong></td>
                 <td><strong>${team.name}</strong></td>
                 <td>${team.affiliation || '-'}</td>
-                <td class="text-center"><span class="badge score-badge fs-6">${team.score}</span></td>
-                <td class="text-center"><i class="fas fa-check-circle text-success"></i> ${team.solved_count}</td>
-                <td class="text-center">${team.last_solve ? timeAgo(team.last_solve) : '—'}</td>
+                <td class="center"><span class="team-score">${team.score}</span></td>
+                <td class="center"><i class=\"fas fa-check-circle\" style=\"color: var(--accent-primary);\"></i> ${team.solved_count}</td>
+                <td class="center">${team.last_solve ? timeAgo(team.last_solve) : '\u2014'}</td>
             </tr>
         `;
     });
@@ -243,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function toDataset(series) {
         return series.map((s, i) => ({
             label: s.team,
-            data: s.data.map(p => ({ x: p.t, y: p.y })),
+            data: (s.data || []).map(p => ({ x: new Date(p.t), y: Number(p.y) || 0 })),
             borderColor: colorFor(i),
             backgroundColor: 'transparent',
             tension: 0.25,
@@ -253,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }));
     }
 
-    const chart = new Chart(ctx, {
+    window._scoreChart = new Chart(ctx, {
         type: 'line',
         data: { datasets: [] },
         options: {
@@ -271,18 +256,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    async function loadSeries() {
-        try {
-            const res = await fetch('{% url "ctf:scoreboard_timeseries_json" %}');
-            const json = await res.json();
-            chart.data.datasets = toDataset(json.series);
-            chart.update();
-        } catch (e) { console.log('Chart load error', e); }
-    }
-
-    loadSeries();
-    // refresh every 60s
-    setInterval(loadSeries, 60000);
+    refreshAll();
 });
 </script>
 {% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'ctf/base.html' %}
+{% block title %}Admin - Users & Teams{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-7 mb-4">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-users"></i> Users</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-dark table-striped align-middle">
+            <thead><tr><th>Username</th><th>Email</th><th>Staff</th><th>Joined</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+              {% for u in users %}
+              <tr>
+                <td>{{ u.username }}</td>
+                <td>{{ u.email }}</td>
+                <td>{% if u.is_staff %}<span class="badge">STAFF</span>{% else %}-{% endif %}</td>
+                <td>{{ u.date_joined|date:'Y-m-d H:i' }}</td>
+                <td class="text-end">
+                  <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ u.id }}" />
+                    {% if u.is_staff %}
+                    <button class="btn btn-sm btn-outline-light" name="action" value="demote">Demote</button>
+                    {% else %}
+                    <button class="btn btn-sm btn-primary" name="action" value="promote">Promote</button>
+                    {% endif %}
+                    {% if u.is_active %}
+                    <button class="btn btn-sm btn-outline-secondary" name="action" value="deactivate">Deactivate</button>
+                    {% else %}
+                    <button class="btn btn-sm btn-primary" name="action" value="activate">Activate</button>
+                    {% endif %}
+                    <button class="btn btn-sm btn-outline-danger" name="action" value="delete">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5 mb-4">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-user-friends"></i> Teams</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for t in teams %}
+          <li class="list-group-item bg-transparent text-light d-flex justify-content-between">
+            <span>{{ t.name }} <small class="text-muted">({{ t.members.count }} members)</small></span>
+            <span class="text-muted">Score: {{ t.total_score }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item bg-transparent text-light">No teams yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

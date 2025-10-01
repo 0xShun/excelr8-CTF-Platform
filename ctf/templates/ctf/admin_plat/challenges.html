@@ -1,0 +1,32 @@
+{% extends 'ctf/base.html' %}
+{% block title %}Admin - Challenges{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="fas fa-puzzle-piece"></i> Challenges</h4>
+  <a class="btn btn-primary" href="{% url 'ctf:admin_challenge_new' %}"><i class="fas fa-plus"></i> New Challenge</a>
+</div>
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-dark table-striped align-middle">
+        <thead><tr><th>Title</th><th>Category</th><th>Value</th><th>Difficulty</th><th>Hidden</th><th>Solves</th><th></th></tr></thead>
+        <tbody>
+          {% for ch in challenges %}
+          <tr>
+            <td>{{ ch.title }}</td>
+            <td>{{ ch.category.name }}</td>
+            <td>{{ ch.value }}</td>
+            <td>{{ ch.get_difficulty_display }}</td>
+            <td>{% if ch.hidden %}Yes{% else %}No{% endif %}</td>
+            <td>{{ ch.solve_count }}</td>
+            <td class="text-end"><a class="btn btn-sm btn-primary" href="{% url 'ctf:admin_challenge_edit' ch.id %}"><i class="fas fa-edit"></i> Edit</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted">No challenges yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

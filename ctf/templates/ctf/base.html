@@ -272,9 +272,21 @@
                             <i class="fas fa-trophy"></i> Scoreboard
                         </a>
                     </li>
+                    {% if user.is_staff %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'ctf:admin_dashboard' %}">
+                            <i class="fas fa-tools"></i> Admin Platform
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
                 
                 <ul class="navbar-nav">
+                    {% if user.is_staff %}
+                    <li class="nav-item me-2 d-none d-lg-block">
+                        <a class="btn btn-primary" href="{% url 'ctf:admin_dashboard' %}"><i class="fas fa-tools"></i> Admin</a>
+                    </li>
+                    {% endif %}
                     {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
@@ -296,8 +308,11 @@
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 {% if user.is_staff %}
+                                <li><a class="dropdown-item" href="{% url 'ctf:admin_dashboard' %}">
+                                    <i class="fas fa-tools"></i> Admin Platform
+                                </a></li>
                                 <li><a class="dropdown-item" href="{% url 'admin:index' %}">
-                                    <i class="fas fa-cog"></i> Admin
+                                    <i class="fas fa-cog"></i> Django Admin
                                 </a></li>
                                 {% endif %}
                                 <li><a class="dropdown-item" href="{% url 'logout' %}">

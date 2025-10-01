@@ -36,13 +36,21 @@ class CustomUserRegistrationForm(UserCreationForm):
             UserProfile.objects.get_or_create(user=user)
         return user
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip().lower()
+        if not email:
+            return email
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationError('A user with that email already exists.')
+        return email
+
 class TeamRegistrationForm(forms.ModelForm):
     team_password = forms.CharField(
-        widget=forms.PasswordInput,
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
         help_text="Set a password for your team (members will need this to join)"
     )
     confirm_password = forms.CharField(
-        widget=forms.PasswordInput,
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
         help_text="Confirm your team password"
     )
     
@@ -61,9 +69,24 @@ class TeamRegistrationForm(forms.ModelForm):
         
         if password and confirm_password:
             if password != confirm_password:
-                raise ValidationError("Passwords don't match")
+                # Attach error to the confirm_password field as tests expect
+                self.add_error('confirm_password', "Passwords don't match")
         
         return cleaned_data
+
+    def clean_team_password(self):
+        pwd = self.cleaned_data.get('team_password')
+        if pwd is None:
+            return pwd
+        if len(pwd) < 6:
+            raise ValidationError('Team password must be at least 6 characters long')
+        return pwd
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '')
+        # Normalize whitespace
+        name = name.strip()
+        return name
 
 class TeamJoinForm(forms.Form):
     team_name = forms.CharField(
@@ -116,6 +139,12 @@ class ChallengeSubmissionForm(forms.ModelForm):
         self.challenge = kwargs.pop('challenge', None)
         super().__init__(*args, **kwargs)
     
+    def clean_submitted_flag(self):
+        value = (self.cleaned_data.get('submitted_flag') or '').strip()
+        if not value:
+            raise ValidationError('This field cannot be blank.')
+        return value
+    
     def save(self, commit=True):
         submission = super().save(commit=False)
         if self.user:
@@ -129,6 +158,11 @@ class ChallengeSubmissionForm(forms.ModelForm):
         if commit:
             submission.save()
         return submission
+
+# Backwards-compatible aliases expected by tests
+# Tests import these names: UserRegistrationForm and SubmissionForm
+UserRegistrationForm = CustomUserRegistrationForm
+SubmissionForm = ChallengeSubmissionForm
 
 class HintUnlockForm(forms.Form):
     confirm = forms.BooleanField(

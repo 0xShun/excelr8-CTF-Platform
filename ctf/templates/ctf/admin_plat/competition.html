@@ -1,0 +1,55 @@
+{% extends 'ctf/base.html' %}
+{% block title %}Admin - Competition Settings{% endblock %}
+{% block content %}
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="card-header"><i class="fas fa-flag-checkered"></i> Competition Settings</div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Name</label>
+        <input class="form-control" name="competition_name" value="{{ settings.competition_name }}" />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Max Team Size</label>
+        <input class="form-control" type="number" name="max_team_size" value="{{ settings.max_team_size }}" />
+      </div>
+      <div class="col-12">
+        <label class="form-label">Description</label>
+        <textarea class="form-control" name="description" rows="3">{{ settings.description }}</textarea>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Start</label>
+        <input class="form-control" type="datetime-local" name="start_time" value="{{ settings.start_time|date:'Y-m-d\TH:i' }}" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">End</label>
+        <input class="form-control" type="datetime-local" name="end_time" value="{{ settings.end_time|date:'Y-m-d\TH:i' }}" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Freeze Time</label>
+        <input class="form-control" type="datetime-local" name="freeze_time" value="{{ settings.freeze_time|date:'Y-m-d\TH:i' }}" />
+      </div>
+      <div class="col-md-3 form-check">
+        <input class="form-check-input" type="checkbox" name="registration_enabled" {% if settings.registration_enabled %}checked{% endif %} />
+        <label class="form-check-label">User Registration</label>
+      </div>
+      <div class="col-md-3 form-check">
+        <input class="form-check-input" type="checkbox" name="team_registration_enabled" {% if settings.team_registration_enabled %}checked{% endif %} />
+        <label class="form-check-label">Team Registration</label>
+      </div>
+      <div class="col-md-3 form-check">
+        <input class="form-check-input" type="checkbox" name="show_scoreboard" {% if settings.show_scoreboard %}checked{% endif %} />
+        <label class="form-check-label">Show Scoreboard</label>
+      </div>
+      <div class="col-md-3 form-check">
+        <input class="form-check-input" type="checkbox" name="freeze_scoreboard" {% if settings.freeze_scoreboard %}checked{% endif %} />
+        <label class="form-check-label">Freeze Scoreboard</label>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer d-flex justify-content-end">
+    <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Save</button>
+  </div>
+</form>
+{% endblock %}

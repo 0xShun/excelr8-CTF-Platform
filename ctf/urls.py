@@ -34,4 +34,15 @@ urlpatterns = [
     # AJAX endpoints
     path('ajax/submit-flag/', views.submit_flag_ajax, name='submit_flag_ajax'),
     path('ajax/challenge-stats/<int:pk>/', views.challenge_stats_json, name='challenge_stats_json'),
+    
+    # Admin platform
+    path('admin_plat/', views.admin_dashboard, name='admin_dashboard'),
+    path('admin_plat/users/', views.admin_users, name='admin_users'),
+    path('admin_plat/competition/', views.admin_competition, name='admin_competition'),
+    path('admin_plat/challenges/', views.admin_challenges, name='admin_challenges'),
+    path('admin_plat/challenges/new/', views.admin_challenge_new, name='admin_challenge_new'),
+    path('admin_plat/challenges/<int:pk>/edit/', views.admin_challenge_edit, name='admin_challenge_edit'),
+    path('admin_plat/instances/', views.admin_instances, name='admin_instances'),
+    path('admin_plat/categories/', views.admin_categories, name='admin_categories'),
+    path('admin_plat/categories/<int:pk>/delete/', views.admin_category_delete, name='admin_category_delete'),
 ] 
