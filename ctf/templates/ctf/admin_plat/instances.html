@@ -50,11 +50,11 @@
                 <div class="col-md-2"><input class="form-control" name="port" type="number" placeholder="Port" value="{{ inst.port }}"/></div>
                 <div class="col-md-3">
                   <select class="form-control" name="status">
-                    <option value="stopped" {% if inst.status=='stopped' %}selected{% endif %}>Stopped</option>
-                    <option value="starting" {% if inst.status=='starting' %}selected{% endif %}>Starting</option>
-                    <option value="running" {% if inst.status=='running' %}selected{% endif %}>Running</option>
-                    <option value="stopping" {% if inst.status=='stopping' %}selected{% endif %}>Stopping</option>
-                    <option value="error" {% if inst.status=='error' %}selected{% endif %}>Error</option>
+                    <option value="stopped" {% if inst.status == 'stopped' %}selected{% endif %}>Stopped</option>
+                    <option value="starting" {% if inst.status == 'starting' %}selected{% endif %}>Starting</option>
+                    <option value="running" {% if inst.status == 'running' %}selected{% endif %}>Running</option>
+                    <option value="stopping" {% if inst.status == 'stopping' %}selected{% endif %}>Stopping</option>
+                    <option value="error" {% if inst.status == 'error' %}selected{% endif %}>Error</option>
                   </select>
                 </div>
                 <div class="col-md-4"><input class="form-control" name="notes" placeholder="Notes" value="{{ inst.notes }}"/></div>

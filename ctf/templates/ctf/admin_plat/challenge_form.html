@@ -29,10 +29,10 @@
       <div class="col-md-4">
         <label class="form-label">Difficulty</label>
         <select class="form-control" name="difficulty">
-          <option value="easy" {% if challenge and challenge.difficulty=='easy' %}selected{% endif %}>Easy</option>
-          <option value="medium" {% if not challenge or challenge.difficulty=='medium' %}selected{% endif %}>Medium</option>
-          <option value="hard" {% if challenge and challenge.difficulty=='hard' %}selected{% endif %}>Hard</option>
-          <option value="expert" {% if challenge and challenge.difficulty=='expert' %}selected{% endif %}>Expert</option>
+          <option value="easy" {% if challenge and challenge.difficulty == 'easy' %}selected{% endif %}>Easy</option>
+          <option value="medium" {% if not challenge or challenge.difficulty == 'medium' %}selected{% endif %}>Medium</option>
+          <option value="hard" {% if challenge and challenge.difficulty == 'hard' %}selected{% endif %}>Hard</option>
+          <option value="expert" {% if challenge and challenge.difficulty == 'expert' %}selected{% endif %}>Expert</option>
         </select>
       </div>
       <div class="col-md-4 d-flex align-items-center">
